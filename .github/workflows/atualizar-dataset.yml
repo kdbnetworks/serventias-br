@@ -1,0 +1,66 @@
+# Coleta mensal do Justiça Aberta e abertura de um PR com o dataset novo.
+#
+# Nada entra no main sem alguém olhar o PR: o diff do manifest.json mostra
+# quantas serventias mudaram de status, e a trava de encolhimento do build
+# derruba o job se a varredura vier pela metade.
+#
+# Para rodar fora do calendário: aba Actions → «atualizar dataset» → Run workflow.
+name: atualizar dataset
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"   # dia 1 de cada mês, 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Varredura nacional, UF a UF
+        run: python -m pipeline.extract_justica_aberta --por-uf --no-resume
+
+      - name: Build (csv.gz + manifesto), com a trava de encolhimento
+        run: python -m pipeline.build
+
+      - name: Resumo para o PR
+        id: resumo
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          m = json.load(open("data/dist/manifest.json", encoding="utf-8"))
+          c = m["contagens"]
+          print(f"versao={m['versao']}")
+          print("corpo<<EOF")
+          print(f"Coleta de **{m['versao']}** no Justiça Aberta.")
+          print()
+          print(f"- {c['serventias_unicas']} serventias únicas")
+          print(f"- {c['registro_imoveis']} Registros de Imóveis, {c['registro_imoveis_ativos']} ativos")
+          print(f"- por status: " + ", ".join(f"{k} {v}" for k, v in c['por_status'].items()))
+          print()
+          print("O diff de `meta.json` e `manifest.json` mostra o que mudou desde a coleta anterior.")
+          print("EOF")
+          PY
+
+      - name: Abrir PR com o dataset novo
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: dataset/coleta-${{ steps.resumo.outputs.versao }}
+          commit-message: "Dataset: coleta de ${{ steps.resumo.outputs.versao }}"
+          title: "Dataset: coleta de ${{ steps.resumo.outputs.versao }}"
+          body: ${{ steps.resumo.outputs.corpo }}
+          add-paths: |
+            data/dist/serventias.csv.gz
+            data/dist/manifest.json
+            data/dist/meta.json
+          delete-branch: true

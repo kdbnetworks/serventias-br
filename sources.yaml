@@ -1,0 +1,33 @@
+# API pública do Justiça Aberta — endpoint reconfirmado em 06/08/2026 lendo o
+# bundle da SPA (assets/registry-*.js). Ver README, seção "Fonte principal".
+#
+# ATENÇÃO: a rota é POST, não GET (GET responde 404, disfarçado de "rota
+# inexistente"). Paginação vai na query string; filtros vão no corpo JSON.
+# O extrator GENÉRICO (pipeline/extract_api.py) só faz GET — para o dia a dia
+# use o dedicado: python -m pipeline.extract_justica_aberta --por-uf
+headers:
+  Accept: application/json, text/plain, */*
+  Content-Type: application/json
+  Origin: https://justicaaberta.cnj.jus.br
+  Referer: https://justicaaberta.cnj.jus.br/produtividade-e-localizacao-de-serventias-extrajudiciais
+  Authorization: ""        # a SPA manda vazio nas rotas públicas
+endpoints:
+  - name: justica_aberta_serventias
+    method: POST
+    url: https://justicaabertaapi.cnj.jus.br/v1/api/serventias
+    body:                  # filtros vão no CORPO
+      cidade_id: 0
+      uf: null             # o extrator dedicado varre UF a UF
+      cns: null
+    fixed_params:          # paginação/busca vão na QUERY STRING
+      search: ""
+      assignments: ""      # valores em GET /v1/api/atribuicoes/tipos
+    pagination:
+      page_param: page
+      size_param: perPage
+      page_size: 100       # confirmado: meta.per_page devolve 100
+      start_page: 1        # paginação 1-based
+    records_path: data     # envelope: {"data": [...], "meta": {...}}
+    # meta.total conta LINHAS, não serventias (a API repete registros entre
+    # páginas). Deduplicar por cns_digits é obrigatório; a diferença entre
+    # meta.total e o nº de CNS distintos NÃO indica coleta incompleta.

@@ -1,0 +1,15 @@
+# Copie para sources.yaml depois de rodar `python -m pipeline.parse_har seu.har`
+# e revisar sources.discovered.yaml. Exemplo ilustrativo do formato:
+endpoints:
+  - name: justica_aberta_serventias
+    method: GET
+    url: https://justicaaberta.cnj.jus.br/CAMINHO/DESCOBERTO/VIA/HAR   # <- do sources.discovered.yaml
+    uf_param: uf              # nome do parâmetro de UF (se a API filtrar por UF); remova se não houver
+    fixed_params: {}          # parâmetros fixos observados no HAR (ex.: tipo: EXTRAJUDICIAL)
+    pagination:
+      page_param: page        # nome do parâmetro de página (null/remova se não paginar)
+      size_param: size
+      page_size: 100
+      start_page: 0
+    records_path: content     # caminho até a lista no JSON (ex.: content | resultado.lista | data.items)
+    # post_data_template: {"uf": "{uf}", "pagina": "{page}"}   # p/ APIs POST

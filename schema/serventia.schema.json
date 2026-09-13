@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/kdbnetworks/serventias-br/schema/serventia.schema.json",
+  "title": "Serventia Extrajudicial (registro canônico)",
+  "type": "object",
+  "required": ["cns", "cns_digits", "status", "fonte", "coletado_em"],
+  "properties": {
+    "cns":             {"type": "string", "pattern": "^\\d{2}\\.\\d{3}-\\d$", "description": "Código Nacional da Serventia formatado (identificador único e estável - art. 136-G CNN/CNJ)"},
+    "cns_digits":      {"type": "string", "pattern": "^\\d{6}$", "description": "CNS só dígitos - chave primária"},
+    "denominacao":     {"type": ["string", "null"], "description": "Nome oficial da serventia"},
+    "status":          {"type": "string", "enum": ["ATIVADA", "DESATIVADA", "EXTINTA", "VAGA", "ANEXADA", "ACUMULADA", "OUTRO", "DESCONHECIDO"]},
+    "status_raw":      {"type": ["string", "null"], "description": "Situação como veio da fonte"},
+    "municipio":       {"type": ["string", "null"]},
+    "uf":              {"type": ["string", "null"], "pattern": "^[A-Z]{2}$"},
+    "atribuicoes":     {"type": "array", "items": {"type": "string", "enum": ["registro_imoveis", "notas", "protesto", "registro_civil_pn", "registro_civil_pj", "titulos_documentos", "contratos_maritimos", "distribuicao"]}, "description": "Flags derivadas da descrição - p/ REURB filtre registro_imoveis"},
+    "atribuicoes_raw": {"type": ["string", "null"], "description": "Descrição da serventia como veio da fonte"},
+    "endereco":        {"type": ["string", "null"]},
+    "bairro":          {"type": ["string", "null"]},
+    "cep":             {"type": ["string", "null"]},
+    "telefone":        {"type": ["string", "null"]},
+    "email":           {"type": ["string", "null"]},
+    "responsavel":     {"type": ["string", "null"], "description": "Delegatário/interino (agente público)"},
+    "comarca":         {"type": ["string", "null"]},
+    "circunscricao":   {"type": ["string", "null"], "description": "Circunscrição imobiliária (curadoria manual - decisiva p/ REURB quando há +1 RI no município)"},
+    "codigo_ibge":     {"type": ["string", "null"], "description": "Código IBGE do município (7 dígitos)"},
+    "latitude":        {"type": ["number", "string", "null"]},
+    "longitude":       {"type": ["number", "string", "null"]},
+    "search_text":     {"type": "string", "description": "Texto normalizado p/ busca (sem acento, minúsculo)"},
+    "fonte":           {"type": "string"},
+    "coletado_em":     {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,50 @@
+# Quando um manifesto novo chega ao main (o PR da coleta foi aprovado), monta
+# os derivados a partir do csv.gz versionado e publica a release v<versao>
+# com todos os arquivos. A URL .../releases/latest/download/manifest.json
+# passa a apontar para ela.
+name: release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - data/dist/manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Derivados a partir do csv.gz
+        run: python -m pipeline.build --de-csv
+
+      - name: Versão
+        id: v
+        run: echo "versao=$(python -c "import json;print(json.load(open('data/dist/manifest.json'))['versao'])")" >> "$GITHUB_OUTPUT"
+
+      - name: Shards por UF num zip
+        run: (cd data/dist && zip -q -r uf.zip uf)
+
+      - name: Publicar release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.v.outputs.versao }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" --clobber data/dist/manifest.json data/dist/meta.json \
+              data/dist/serventias.csv.gz data/dist/serventias.sqlite data/dist/serventias.min.json data/dist/uf.zip
+          else
+            gh release create "$tag" --title "Coleta de ${{ steps.v.outputs.versao }}" \
+              --notes "Serventias extrajudiciais do Brasil, coletadas do Justiça Aberta/CNJ em ${{ steps.v.outputs.versao }}. O manifest.json descreve os arquivos." \
+              data/dist/manifest.json data/dist/meta.json \
+              data/dist/serventias.csv.gz data/dist/serventias.sqlite data/dist/serventias.min.json data/dist/uf.zip
+          fi

@@ -1,0 +1,68 @@
+{
+  "gerado_em": "2026-09-13T20:34:47+00:00",
+  "linhas_lidas": 12430,
+  "serventias_unicas": 12430,
+  "por_uf": {
+    "AC": 138,
+    "AL": 180,
+    "AM": 125,
+    "AP": 24,
+    "BA": 1489,
+    "CE": 478,
+    "DF": 41,
+    "ES": 275,
+    "GO": 564,
+    "MA": 243,
+    "MG": 2817,
+    "MS": 134,
+    "MT": 217,
+    "PA": 293,
+    "PB": 338,
+    "PE": 453,
+    "PI": 399,
+    "PR": 884,
+    "RJ": 397,
+    "RN": 124,
+    "RO": 122,
+    "RR": 19,
+    "RS": 478,
+    "SC": 429,
+    "SE": 141,
+    "SP": 1385,
+    "TO": 242,
+    "XX": 1
+  },
+  "por_status": {
+    "ATIVADA": 8912,
+    "DESATIVADA": 3362,
+    "EXTINTA": 156
+  },
+  "por_situacao_juridica": {
+    "PROVIDA": 6223,
+    "VAGA": 3960,
+    "NAO_INFORMADA": 1774,
+    "CONVERSAO_EM_DILIGENCIA": 422,
+    "SOB_INTERVENCAO": 50,
+    "VAGA_SUB_JUDICE": 1
+  },
+  "por_tipo_registro": {
+    "serventia": 12012,
+    "sem_atribuicao": 384,
+    "corregedoria": 29,
+    "suspeito": 4,
+    "indefinido": 1
+  },
+  "por_atribuicao": {
+    "registro_civil_pn": 8639,
+    "notas": 7611,
+    "protesto": 3353,
+    "titulos_documentos": 3246,
+    "registro_civil_pj": 3223,
+    "registro_imoveis": 3012,
+    "contratos_maritimos": 638,
+    "distribuicao": 308
+  },
+  "fontes": {
+    "justica_aberta_api": 12430
+  }
+}

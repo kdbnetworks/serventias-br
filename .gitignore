@@ -1,0 +1,29 @@
+# Cache bruto da coleta e do staging: reprocessável, pesado, e da máquina de quem coletou.
+data/raw/
+data/staging/
+
+# Do dist só viaja no git o que o manifesto assina: o .csv.gz, o próprio
+# manifesto e o meta. sqlite, json e shards saem do `build --de-csv` e vão
+# para a release.
+data/dist/*
+!data/dist/serventias.csv.gz
+!data/dist/manifest.json
+!data/dist/meta.json
+
+# Saídas dos diagnósticos em tools/
+diag.txt
+diag_spa.txt
+sources.discovered.yaml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Editores e sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

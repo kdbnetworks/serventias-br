@@ -1,0 +1,94 @@
+{
+  "esquema": "serventias-br/manifesto@1",
+  "dataset": "serventias-br",
+  "versao": "2026-08-06",
+  "gerado_em": "2026-09-13T20:34:47+00:00",
+  "coletado_em": "2026-08-06T02:17:51+00:00",
+  "coletado_entre": [
+    "2026-08-06T02:17:47+00:00",
+    "2026-08-06T02:17:51+00:00"
+  ],
+  "fonte": {
+    "nome": "justica_aberta_api",
+    "orgao": "Conselho Nacional de Justiça — Corregedoria Nacional de Justiça",
+    "portal": "https://justicaaberta.cnj.jus.br/produtividade-e-localizacao-de-serventias-extrajudiciais",
+    "endpoint": "https://justicaabertaapi.cnj.jus.br/v1/api/serventias",
+    "metodo": "POST"
+  },
+  "repositorio": "https://github.com/kdbnetworks/serventias-br",
+  "url": "https://github.com/kdbnetworks/serventias-br/releases/latest/download/manifest.json",
+  "defasagem": {
+    "aviso_dias": 60,
+    "alerta_dias": 120
+  },
+  "arquivos": {
+    "serventias.csv.gz": {
+      "bytes": 876532,
+      "sha256": "b98212d7acdc35fb652443be5cced734f12367f5a1adb61c33848d7176588034",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.csv.gz"
+    },
+    "serventias.sqlite": {
+      "bytes": 9883648,
+      "sha256": "f5b618be94df8761acdfbd1fd246ad77450cd244dce590ae50888672217e9501",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.sqlite"
+    },
+    "serventias.min.json": {
+      "bytes": 10431660,
+      "sha256": "4a662bf868f28c6c1d33143cfb58e2e86feb77efcbbe4e4c766c877001324204",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.min.json"
+    },
+    "meta.json": {
+      "bytes": 1322,
+      "sha256": "0470ae03869a58f3faa61e6d87fcaef203c4ab23d0f7a6df877a201b697d2a83",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/meta.json"
+    }
+  },
+  "contagens": {
+    "serventias_unicas": 12430,
+    "linhas_lidas": 12430,
+    "registro_imoveis": 3012,
+    "registro_imoveis_ativos": 2575,
+    "por_status": {
+      "ATIVADA": 8912,
+      "DESATIVADA": 3362,
+      "EXTINTA": 156
+    },
+    "por_tipo_registro": {
+      "serventia": 12012,
+      "sem_atribuicao": 384,
+      "corregedoria": 29,
+      "suspeito": 4,
+      "indefinido": 1
+    },
+    "por_uf": {
+      "AC": 138,
+      "AL": 180,
+      "AM": 125,
+      "AP": 24,
+      "BA": 1489,
+      "CE": 478,
+      "DF": 41,
+      "ES": 275,
+      "GO": 564,
+      "MA": 243,
+      "MG": 2817,
+      "MS": 134,
+      "MT": 217,
+      "PA": 293,
+      "PB": 338,
+      "PE": 453,
+      "PI": 399,
+      "PR": 884,
+      "RJ": 397,
+      "RN": 124,
+      "RO": 122,
+      "RR": 19,
+      "RS": 478,
+      "SC": 429,
+      "SE": 141,
+      "SP": 1385,
+      "TO": 242,
+      "XX": 1
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# O que o pipeline principal precisa (coleta, normalização, build, testes).
+requests>=2.31
+pyyaml>=6.0
+pytest>=8.0
+
+# Opcionais — instale só se for usar:
+#   ingest_tabular (planilhas do Painel do CNJ e das Corregedorias)
+#     pandas>=2.0
+#     openpyxl>=3.1
+#   API local de consumo (api/main.py)
+#     fastapi>=0.110
+#     uvicorn>=0.29
