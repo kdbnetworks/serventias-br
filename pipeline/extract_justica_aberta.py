@@ -177,7 +177,89 @@ def map_row(row: dict) -> dict | None:
 
 
 # --------------------------------------------------------------------------- #
-# Varredura
+# Varredura COMPLETA por UF (15/09/2026)
+# --------------------------------------------------------------------------- #
+# A paginação da API NÃO tem ordem estável: cada página é um recorte de uma ordenação que muda entre as
+# requisições. Paginando de 100 em 100, a coleta de 06/08 trouxe as 16.268 linhas que a API declara — mas só
+# 12.430 serventias distintas. 3.838 linhas eram REPETIÇÕES de serventias já vistas, e outras tantas nunca
+# vieram: em SC, 689 declaradas e 429 coletadas; o Registro de Imóveis de Gaspar (10.424-0) ficou de fora, e o
+# RCPN da mesma cidade (10.780-5) veio três vezes. O `vistos` descartava a repetição em silêncio.
+#
+# O remédio: pedir a UF INTEIRA numa página só (perPage ≥ total) e CONFERIR distintos == total. Se a API limitar
+# o perPage, varre de novo, várias vezes, somando o que faltava, até fechar a conta ou desistir alto.
+MAX_PASSADAS = 8
+
+
+def varrer_completo(sess, out, vistos, *, uf: str, assignments: str, search: str,
+                    desconhecidas: Counter) -> tuple[int, int, int, int]:
+    """Coleta uma UF inteira e devolve (novos gravados, distintos da UF, total declarado, linhas da página única).
+
+    `total` é o que a API CONTA; as linhas da página única são o que ela LISTA. Em SP (15/09) ela contou 1.680 e
+    listou 1.679 mesmo com perPage=1.680 e oito passadas — a diferença é da API, não da paginação. Por isso a
+    conferência que importa é distintos == linhas listadas (nada repetido, nada truncado)."""
+    sonda = fetch_page(sess, 1, 1, assignments=assignments, search=search, uf=uf)
+    time.sleep(RATE_SLEEP)
+    if sonda is None:
+        print(f"  [!] {uf}: sem resposta na sonda")
+        return 0, 0, -1, 0
+    _, meta = unwrap(sonda)
+    total = int(meta.get("total") or 0)
+    if total == 0:
+        print(f"[{uf}] total=0")
+        return 0, 0, 0, 0
+
+    da_uf: set[str] = set()
+    novos = 0
+
+    def absorver(registros: list[dict]) -> None:
+        nonlocal novos
+        for row in registros:
+            for k in row:
+                if k not in CHAVES_CONHECIDAS:
+                    desconhecidas[k] += 1
+            rec = map_row(row)
+            if rec is None:
+                continue
+            da_uf.add(rec["cns_digits"])
+            if rec["cns_digits"] not in vistos:
+                vistos.add(rec["cns_digits"])
+                out.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                novos += 1
+
+    payload = fetch_page(sess, 1, total, assignments=assignments, search=search, uf=uf)
+    time.sleep(RATE_SLEEP)
+    if payload is None:
+        print(f"  [!] {uf}: falha na página única")
+        return novos, len(da_uf), total, 0
+    (RAW_DIR / f"ja_{uf}_unica_pp{total}.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    registros, meta = unwrap(payload)
+    listadas = len(registros)
+    absorver(registros)
+    efetivo = int(meta.get("per_page") or len(registros) or 100)
+
+    passada = 0
+    while len(da_uf) < total and passada < MAX_PASSADAS:
+        passada += 1
+        ultima = max(1, -(-total // efetivo))
+        antes = len(da_uf)
+        for page in range(1, ultima + 1):
+            p = fetch_page(sess, page, efetivo, assignments=assignments, search=search, uf=uf)
+            time.sleep(RATE_SLEEP)
+            if p is None:
+                continue
+            (RAW_DIR / f"ja_{uf}_passada{passada}_p{page}_pp{efetivo}.json").write_text(
+                json.dumps(p, ensure_ascii=False), encoding="utf-8")
+            absorver(unwrap(p)[0])
+        print(f"  [{uf}] passada {passada}: {antes} → {len(da_uf)} de {total}")
+
+    marca = "ok" if len(da_uf) == total else (
+        f"ok · a API conta {total - len(da_uf)} a mais do que lista" if len(da_uf) >= listadas and listadas < efetivo else "INCOMPLETA")
+    print(f"[{uf}] total={total} listadas={listadas} distintos={len(da_uf)} novos={novos} [{marca}]")
+    return novos, len(da_uf), total, listadas
+
+
+# --------------------------------------------------------------------------- #
+# Varredura (paginada, a de antes — sujeita à ordem instável; ver varrer_completo)
 # --------------------------------------------------------------------------- #
 def varrer(sess, out, vistos, *, escopo: str, uf: str | None, per_page: int,
            assignments: str, search: str, max_pages: int | None,
@@ -231,6 +313,46 @@ def varrer(sess, out, vistos, *, escopo: str, uf: str | None, per_page: int,
             break
 
     return novos_total
+
+
+def run_completo(*, search="", assignments="", ufs=None, aceitar_incompleto=False) -> None:
+    """Todas as UFs, cada uma inteira e conferida contra o total da API. Grava a cobertura e FALHA se faltar."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    STAGING.parent.mkdir(parents=True, exist_ok=True)
+    sess = requests.Session()
+    sess.headers.update(HEADERS)
+
+    vistos: set[str] = set()
+    desconhecidas: Counter = Counter()
+    cobertura: dict[str, dict] = {}
+    with STAGING.open("w", encoding="utf-8") as out:
+        for uf in (ufs or sorted(UFS)):
+            _, distintos, total, listadas = varrer_completo(sess, out, vistos, uf=uf, assignments=assignments,
+                                                           search=search, desconhecidas=desconhecidas)
+            cobertura[uf] = {"total_api": total, "listadas": listadas, "distintos": distintos,
+                             "divergencia_api": max(total - listadas, 0)}
+
+    # FALTA de verdade: sem resposta, página truncada (listou tudo o que pedimos e ainda assim ficou abaixo do
+    # total) ou repetição dentro da própria página única. A diferença entre o que a API CONTA e o que LISTA,
+    # com a página vindo abaixo do perPage, é da API — vai para a cobertura, não derruba a coleta.
+    faltam = {uf: c for uf, c in cobertura.items()
+              if c["total_api"] < 0 or c["distintos"] < c["listadas"]
+              or (c["listadas"] >= c["total_api"] and c["distintos"] < c["total_api"])}
+    soma_api = sum(max(c["total_api"], 0) for c in cobertura.values())
+    (STAGING.parent / "cobertura.json").write_text(json.dumps(
+        {"total_api": soma_api, "distintos": len(vistos), "por_uf": cobertura, "incompletas": sorted(faltam)},
+        ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"\n[ok] {len(vistos)} CNS distintos; a API declara {soma_api} → {STAGING}")
+    if desconhecidas:
+        print("[dica] chaves da API ainda não mapeadas (top 10):")
+        for k, c in desconhecidas.most_common(10):
+            print(f"       {k} ({c}x)")
+    if faltam:
+        print(f"[ERRO] cobertura incompleta em {sorted(faltam)}: {faltam}")
+        if not aceitar_incompleto:
+            sys.exit(2)   # a Action NÃO pode publicar um catálogo com buraco
+    print("Agora rode: python -m pipeline.build")
 
 
 def run(*, search="", assignments="", per_page=100, max_pages=None,
@@ -308,7 +430,16 @@ if __name__ == "__main__":
     ap.add_argument("--dump-first", action="store_true",
                     help="mostra meta + 1º registro + mapeamento e sai")
     ap.add_argument("--no-resume", dest="resume", action="store_false")
+    ap.add_argument("--paginado", action="store_true",
+                    help="o modo ANTIGO, paginado — sujeito à ordem instável da API (perde serventias)")
+    ap.add_argument("--aceitar-incompleto", action="store_true",
+                    help="não falha quando alguma UF fica abaixo do total da API (só para diagnóstico)")
     a = ap.parse_args()
-    run(search=a.search, assignments=a.assignments, per_page=a.per_page,
-        max_pages=a.max_pages, uf=a.uf, por_uf=a.por_uf,
-        dump_first=a.dump_first, resume=a.resume)
+    if a.dump_first or a.paginado:
+        run(search=a.search, assignments=a.assignments, per_page=a.per_page,
+            max_pages=a.max_pages, uf=a.uf, por_uf=a.por_uf,
+            dump_first=a.dump_first, resume=a.resume)
+    else:
+        # o padrão desde 15/09: UF a UF, inteira, conferida
+        run_completo(search=a.search, assignments=a.assignments,
+                     ufs=[a.uf.upper()] if a.uf else None, aceitar_incompleto=a.aceitar_incompleto)

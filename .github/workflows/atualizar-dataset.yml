@@ -27,8 +27,10 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
 
-      - name: Varredura nacional, UF a UF
-        run: python -m pipeline.extract_justica_aberta --por-uf --no-resume
+      # UF a UF, cada uma INTEIRA numa página e conferida contra o total da API (a paginação da API não tem
+      # ordem estável e perdia ~24% das serventias). Sai com código 2 se alguma UF ficar incompleta: sem PR.
+      - name: Varredura nacional, UF a UF, conferida
+        run: python -m pipeline.extract_justica_aberta
 
       - name: Build (csv.gz + manifesto), com a trava de encolhimento
         run: python -m pipeline.build

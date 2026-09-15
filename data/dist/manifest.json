@@ -1,12 +1,12 @@
 {
   "esquema": "serventias-br/manifesto@1",
   "dataset": "serventias-br",
-  "versao": "2026-08-06",
-  "gerado_em": "2026-09-13T20:34:47+00:00",
-  "coletado_em": "2026-08-06T02:17:51+00:00",
+  "versao": "2026-09-15",
+  "gerado_em": "2026-09-15T04:09:19+00:00",
+  "coletado_em": "2026-09-15T04:08:49+00:00",
   "coletado_entre": [
-    "2026-08-06T02:17:47+00:00",
-    "2026-08-06T02:17:51+00:00"
+    "2026-09-15T04:07:49+00:00",
+    "2026-09-15T04:08:49+00:00"
   ],
   "fonte": {
     "nome": "justica_aberta_api",
@@ -23,72 +23,71 @@
   },
   "arquivos": {
     "serventias.csv.gz": {
-      "bytes": 876532,
-      "sha256": "b98212d7acdc35fb652443be5cced734f12367f5a1adb61c33848d7176588034",
-      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.csv.gz"
+      "bytes": 1147027,
+      "sha256": "dbbfadfdc0ecac62eb6100962e38a403a4f5acdc1caab1ea8d3dcd95f051b336",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/serventias.csv.gz"
     },
     "serventias.sqlite": {
-      "bytes": 9883648,
-      "sha256": "f5b618be94df8761acdfbd1fd246ad77450cd244dce590ae50888672217e9501",
-      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.sqlite"
+      "bytes": 13078528,
+      "sha256": "957e6e025140c1f98002739bacdd1b2b7bc638f31f65594a1b7b2cbf825835e3",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/serventias.sqlite"
     },
     "serventias.min.json": {
-      "bytes": 10431660,
-      "sha256": "4a662bf868f28c6c1d33143cfb58e2e86feb77efcbbe4e4c766c877001324204",
-      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/serventias.min.json"
+      "bytes": 13840750,
+      "sha256": "c744e96804b9f2039e0c840a5a55bc7ad1f4751ab5a17a57264678b3dd56fc39",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/serventias.min.json"
     },
     "meta.json": {
-      "bytes": 1322,
-      "sha256": "0470ae03869a58f3faa61e6d87fcaef203c4ab23d0f7a6df877a201b697d2a83",
-      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-08-06/meta.json"
+      "bytes": 1312,
+      "sha256": "45ccd47b54a24b0754099abff4019804ad50867a1a7e7fc468a88c253bdeddd1",
+      "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/meta.json"
     }
   },
   "contagens": {
-    "serventias_unicas": 12430,
-    "linhas_lidas": 12430,
-    "registro_imoveis": 3012,
-    "registro_imoveis_ativos": 2575,
+    "serventias_unicas": 16269,
+    "linhas_lidas": 16269,
+    "registro_imoveis": 4263,
+    "registro_imoveis_ativos": 3712,
     "por_status": {
-      "ATIVADA": 8912,
-      "DESATIVADA": 3362,
-      "EXTINTA": 156
+      "ATIVADA": 12177,
+      "DESATIVADA": 3875,
+      "EXTINTA": 217
     },
     "por_tipo_registro": {
-      "serventia": 12012,
-      "sem_atribuicao": 384,
-      "corregedoria": 29,
+      "serventia": 15849,
+      "sem_atribuicao": 385,
+      "corregedoria": 30,
       "suspeito": 4,
       "indefinido": 1
     },
     "por_uf": {
       "AC": 138,
-      "AL": 180,
+      "AL": 278,
       "AM": 125,
       "AP": 24,
-      "BA": 1489,
-      "CE": 478,
+      "BA": 1806,
+      "CE": 726,
       "DF": 41,
-      "ES": 275,
-      "GO": 564,
-      "MA": 243,
-      "MG": 2817,
-      "MS": 134,
-      "MT": 217,
-      "PA": 293,
-      "PB": 338,
-      "PE": 453,
-      "PI": 399,
-      "PR": 884,
-      "RJ": 397,
-      "RN": 124,
+      "ES": 410,
+      "GO": 755,
+      "MA": 333,
+      "MG": 3213,
+      "MS": 202,
+      "MT": 316,
+      "PA": 388,
+      "PB": 534,
+      "PE": 623,
+      "PI": 403,
+      "PR": 1297,
+      "RJ": 620,
+      "RN": 218,
       "RO": 122,
       "RR": 19,
-      "RS": 478,
-      "SC": 429,
+      "RS": 831,
+      "SC": 689,
       "SE": 141,
-      "SP": 1385,
-      "TO": 242,
-      "XX": 1
+      "SP": 1679,
+      "TO": 338
     }
   }
 }
