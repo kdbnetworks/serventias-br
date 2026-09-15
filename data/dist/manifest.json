@@ -38,8 +38,8 @@
       "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/serventias.min.json"
     },
     "meta.json": {
-      "bytes": 1312,
-      "sha256": "45ccd47b54a24b0754099abff4019804ad50867a1a7e7fc468a88c253bdeddd1",
+      "bytes": 1246,
+      "sha256": "1c8a3c82963b5479a6735912fe1f837dbe9d800bff5ce4f9f41d23f39dee2b02",
       "url": "https://github.com/kdbnetworks/serventias-br/releases/download/v2026-09-15/meta.json"
     }
   },

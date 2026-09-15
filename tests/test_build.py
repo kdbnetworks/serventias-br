@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """O build de ponta a ponta sobre um staging pequeno, e a volta pelo csv.gz."""
 import gzip
+import hashlib
 import json
 
 import pytest
@@ -42,6 +43,9 @@ def test_build_gera_csv_gz_manifesto_e_derivados(tmp_path, monkeypatch):
     assert m["contagens"]["serventias_unicas"] == 5
     assert m["contagens"]["registro_imoveis_ativos"] == 5
     assert set(m["arquivos"]) == {"serventias.csv.gz", "serventias.sqlite", "serventias.min.json", "meta.json"}
+    # o git guarda LF; um sha calculado sobre CRLF (Windows) não confere com o checkout da Action
+    assert b"\r" not in (dist / "meta.json").read_bytes()
+    assert b"\r" not in (dist / "manifest.json").read_bytes()
 
     with gzip.open(dist / "serventias.csv.gz", "rt", encoding="utf-8") as fh:
         cabecalho = fh.readline().strip().split(";")
@@ -72,7 +76,44 @@ def test_de_csv_reconstroi_sem_staging_e_preserva_o_manifesto(tmp_path, monkeypa
     assert recs[0]["atribuicoes"] == ["registro_imoveis"]
     assert "itajai" in recs[0]["search_text"]
     assert recs[0]["latitude"] == "-26.9"
-    assert (dist / "manifest.json").read_text(encoding="utf-8") == manifesto_publicado
+    antes, depois = json.loads(manifesto_publicado), json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+    for chave in ("versao", "gerado_em", "contagens"):
+        assert depois[chave] == antes[chave]
+    for nome in ("serventias.csv.gz", "meta.json"):
+        assert depois["arquivos"][nome] == antes["arquivos"][nome]
+
+
+def test_de_csv_publica_o_csv_gz_versionado_e_o_manifesto_confere_com_o_disco(tmp_path, monkeypatch):
+    # A release roda noutra máquina, com outra zlib: o mesmo CSV comprime para outros bytes. Aqui isso é simulado
+    # recomprimindo o .csv.gz num nível diferente, como se fosse o que o git trouxe de um build feito em outro lugar.
+    dist = _staging(tmp_path, monkeypatch)
+    b.build()
+    conteudo = gzip.decompress((dist / "serventias.csv.gz").read_bytes())
+    with gzip.GzipFile(dist / "serventias.csv.gz", "wb", compresslevel=1, mtime=0) as fh:
+        fh.write(conteudo)
+    versionado = (dist / "serventias.csv.gz").read_bytes()
+    m = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+    m["arquivos"]["serventias.csv.gz"]["sha256"] = hashlib.sha256(versionado).hexdigest()
+    (dist / "manifest.json").write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    b.build(de_csv=True)
+
+    assert (dist / "serventias.csv.gz").read_bytes() == versionado
+    final = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+    for nome, entrada in final["arquivos"].items():
+        assert entrada["sha256"] == hashlib.sha256((dist / nome).read_bytes()).hexdigest(), nome
+
+
+def test_de_csv_recusa_manifesto_que_nao_descreve_o_csv_gz(tmp_path, monkeypatch):
+    dist = _staging(tmp_path, monkeypatch)
+    b.build()
+    m = json.loads((dist / "manifest.json").read_text(encoding="utf-8"))
+    m["arquivos"]["serventias.csv.gz"]["sha256"] = "0" * 64
+    (dist / "manifest.json").write_text(json.dumps(m, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    with pytest.raises(SystemExit) as ex:
+        b.build(de_csv=True)
+    assert "serventias.csv.gz" in str(ex.value)
 
 
 def test_encolhimento_aborta_antes_de_escrever(tmp_path, monkeypatch):

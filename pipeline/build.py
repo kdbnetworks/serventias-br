@@ -84,7 +84,7 @@ def _iter_csv_gz(caminho: Path):
             yield rec
 
 
-def _escrever_csv(recs: list[dict]) -> None:
+def _escrever_csv(recs: list[dict], regravar_gz: bool = True) -> None:
     linhas = []
     for r in recs:
         row = {k: r.get(k) for k in CSV_FIELDS}
@@ -95,6 +95,13 @@ def _escrever_csv(recs: list[dict]) -> None:
         w = csv.DictWriter(fh, fieldnames=CSV_FIELDS, extrasaction="ignore", delimiter=";")
         w.writeheader()
         w.writerows(linhas)
+
+    # Na montagem da release o .csv.gz versionado JÁ É o arquivo publicado.
+    # Recomprimi-lo noutra máquina (outra zlib) dá outro sha256 para o mesmo
+    # conteúdo, e o manifesto passa a mentir sobre o arquivo que vai junto —
+    # foi o que as releases de 06/08 e 15/09/2026 publicaram.
+    if not regravar_gz:
+        return
 
     # mtime=0 deixa o gzip determinístico: o mesmo dado dá o mesmo sha256,
     # e o manifesto só muda quando o conteúdo muda.
@@ -127,7 +134,7 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
 
     # ---------- JSON completo ----------
     (DIST / "serventias.min.json").write_text(
-        json.dumps(recs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        json.dumps(recs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8", newline="\n")
 
     # ---------- shards por UF ----------
     por_uf: dict[str, list] = {}
@@ -135,10 +142,10 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
         por_uf.setdefault(r.get("uf") or "XX", []).append(r)
     for uf, lst in por_uf.items():
         (DIST / "uf" / f"{uf}.json").write_text(
-            json.dumps(lst, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            json.dumps(lst, ensure_ascii=False, separators=(",", ":")), encoding="utf-8", newline="\n")
 
     # ---------- CSV (+ .gz, a fonte que viaja) ----------
-    _escrever_csv(recs)
+    _escrever_csv(recs, regravar_gz=not de_csv)
 
     # ---------- SQLite ----------
     db_path = DIST / "serventias.sqlite"
@@ -203,22 +210,40 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
         "por_atribuicao": dict(Counter(a for r in recs for a in r.get("atribuicoes") or []).most_common()),
         "fontes": dict(Counter(r.get("fonte") for r in recs).most_common()),
     }
-    (DIST / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    # O meta.json versionado viaja como o .csv.gz: a release não o reescreve.
+    # Os JSON saem com LF em qualquer máquina — o git guarda LF, e um sha
+    # calculado sobre CRLF no Windows não confere com o checkout da Action.
+    if not de_csv or anterior is None or not (DIST / "meta.json").exists():
+        (DIST / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
 
     # ---------- manifesto ----------
-    # Quando o build parte do próprio .csv.gz (montagem da release), o
-    # manifesto já publicado é a verdade e fica como está: regerá-lo só
-    # trocaria o `gerado_em` sem mudar dado nenhum.
-    if not de_csv or anterior is None:
-        publicados = {
-            "serventias.csv.gz": CSV_GZ,
-            "serventias.sqlite": db_path,
-            "serventias.min.json": DIST / "serventias.min.json",
-            "meta.json": DIST / "meta.json",
-        }
+    publicados = {
+        "serventias.csv.gz": CSV_GZ,
+        "serventias.sqlite": db_path,
+        "serventias.min.json": DIST / "serventias.min.json",
+        "meta.json": DIST / "meta.json",
+    }
+    if de_csv and anterior is not None:
+        # Montagem da release: o manifesto versionado é a verdade sobre o que
+        # veio do git (versão, contagens, csv.gz, meta.json). O sqlite e o
+        # min.json nascem aqui e entram com o sha do arquivo que vai subir.
+        for nome in ("serventias.sqlite", "serventias.min.json"):
+            entrada = (anterior.get("arquivos") or {}).get(nome)
+            if entrada is not None:
+                entrada["bytes"] = publicados[nome].stat().st_size
+                entrada["sha256"] = manifesto.sha256_de(publicados[nome])
+        MANIFESTO.write_text(json.dumps(anterior, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    else:
         novo = manifesto.montar(recs, publicados, meta)
-        MANIFESTO.write_text(json.dumps(novo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        MANIFESTO.write_text(json.dumps(novo, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
         print(f"[ok] manifesto v{novo['versao']} · sha256 do csv.gz {novo['arquivos']['serventias.csv.gz']['sha256'][:12]}…")
+
+    # A trava da release: todo arquivo que o manifesto descreve tem de ser,
+    # byte a byte, o que está em disco para subir.
+    divergentes = [nome for nome, entrada in ((manifesto.ler(MANIFESTO) or {}).get("arquivos") or {}).items()
+                   if nome in publicados and entrada.get("sha256") != manifesto.sha256_de(publicados[nome])]
+    if divergentes:
+        raise SystemExit(f"O manifesto não descreve o que está em disco: {', '.join(divergentes)}. Nada foi publicado.")
 
     print(f"[ok] {len(recs)} serventias únicas (de {lidos} linhas) → {DIST}/")
     for k, v in meta["por_atribuicao"].items():
