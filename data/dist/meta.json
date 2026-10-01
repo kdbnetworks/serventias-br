@@ -1,5 +1,5 @@
 {
-  "gerado_em": "2026-09-15T04:09:19+00:00",
+  "gerado_em": "2026-10-01T09:30:53+00:00",
   "linhas_lidas": 16269,
   "serventias_unicas": 16269,
   "por_uf": {
@@ -32,32 +32,32 @@
     "TO": 338
   },
   "por_status": {
-    "ATIVADA": 12177,
-    "DESATIVADA": 3875,
-    "EXTINTA": 217
+    "ATIVADA": 12175,
+    "DESATIVADA": 3874,
+    "EXTINTA": 220
   },
   "por_situacao_juridica": {
-    "PROVIDA": 8595,
-    "VAGA": 5103,
-    "NAO_INFORMADA": 2006,
-    "CONVERSAO_EM_DILIGENCIA": 483,
-    "SOB_INTERVENCAO": 79,
+    "PROVIDA": 8626,
+    "VAGA": 5067,
+    "NAO_INFORMADA": 2005,
+    "CONVERSAO_EM_DILIGENCIA": 488,
+    "SOB_INTERVENCAO": 80,
     "VAGA_SUB_JUDICE": 3
   },
   "por_tipo_registro": {
-    "serventia": 15849,
-    "sem_atribuicao": 385,
+    "serventia": 15850,
+    "sem_atribuicao": 384,
     "corregedoria": 30,
     "suspeito": 4,
     "indefinido": 1
   },
   "por_atribuicao": {
-    "registro_civil_pn": 11368,
+    "registro_civil_pn": 11369,
     "notas": 10186,
-    "protesto": 4644,
+    "protesto": 4643,
     "titulos_documentos": 4537,
     "registro_civil_pj": 4492,
-    "registro_imoveis": 4263,
+    "registro_imoveis": 4264,
     "contratos_maritimos": 827,
     "distribuicao": 473
   },
