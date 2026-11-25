@@ -23,6 +23,12 @@ Campos por registro (nomes reais da API):
     denominacao_padrao, responsavel{nome}, natureza, website, endereco,
     numero, bairro, cidade, uf, telefone, email
 
+Desde 11/2026 (conferido em 25/11 em 8.302 registros de seis UFs) a API manda
+também `tipo_cartorio`, `substitutos` (nomes num texto só, separados por « | »),
+`cidade_comarca` e `cidade_comarca_uf` (por ora vazios em todos), e DEIXOU de
+mandar `id`, `latitude`, `longitude`, `cidade_id` e `complemento`. O build
+herda da coleta anterior o que a fonte parou de mandar (ver build.HERDADOS).
+
 Uso:
     python -m pipeline.extract_justica_aberta --dump-first   # inspeciona e sai
     python -m pipeline.extract_justica_aberta                # varredura nacional
@@ -125,7 +131,21 @@ CHAVES_CONHECIDAS = {
     "denominacao_padrao", "responsavel", "natureza", "website", "endereco",
     "numero", "bairro", "cidade", "uf", "telefone", "email", "id",
     "cidade_id", "cep", "latitude", "longitude", "complemento",
+    # 11/2026: os quatro que a API passou a mandar
+    "tipo_cartorio", "substitutos", "cidade_comarca", "cidade_comarca_uf",
 }
+
+# Quantas vezes cada chave apareceu na coleta. Serve para dizer, no fim, que
+# chave CONHECIDA deixou de vir: o `id` e as coordenadas sumiram da API sem
+# nenhum aviso, porque só se olhava a chave nova (25/11/2026).
+CHAVES_VISTAS: Counter = Counter()
+
+
+def chaves_que_sumiram() -> list[str]:
+    """As chaves conhecidas que não vieram em nenhum registro desta coleta."""
+    if not CHAVES_VISTAS:
+        return []
+    return sorted(CHAVES_CONHECIDAS - set(CHAVES_VISTAS))
 
 
 def map_row(row: dict) -> dict | None:
@@ -155,6 +175,11 @@ def map_row(row: dict) -> dict | None:
         "website": row.get("website"),
         "situacao_juridica": (sit.get("descricao")
                               if isinstance(sit, dict) else sit),
+        "tipo_cartorio": row.get("tipo_cartorio"),
+        "substitutos": row.get("substitutos"),
+        # a comarca é nomeada pela cidade-sede; vai para o `comarca` canônico
+        "comarca": row.get("cidade_comarca"),
+        "comarca_uf": row.get("cidade_comarca_uf"),
     }
 
     rec = build_record(
@@ -214,6 +239,7 @@ def varrer_completo(sess, out, vistos, *, uf: str, assignments: str, search: str
     def absorver(registros: list[dict]) -> None:
         nonlocal novos
         for row in registros:
+            CHAVES_VISTAS.update(row.keys())
             for k in row:
                 if k not in CHAVES_CONHECIDAS:
                     desconhecidas[k] += 1
@@ -291,6 +317,7 @@ def varrer(sess, out, vistos, *, escopo: str, uf: str | None, per_page: int,
 
         novos = 0
         for row in registros:
+            CHAVES_VISTAS.update(row.keys())
             for k in row:
                 if k not in CHAVES_CONHECIDAS:
                     desconhecidas[k] += 1
@@ -348,6 +375,8 @@ def run_completo(*, search="", assignments="", ufs=None, aceitar_incompleto=Fals
         print("[dica] chaves da API ainda não mapeadas (top 10):")
         for k, c in desconhecidas.most_common(10):
             print(f"       {k} ({c}x)")
+    if chaves_que_sumiram():
+        print(f"[aviso] chaves conhecidas que não vieram em nenhum registro: {', '.join(chaves_que_sumiram())}")
     if faltam:
         print(f"[ERRO] cobertura incompleta em {sorted(faltam)}: {faltam}")
         if not aceitar_incompleto:
@@ -414,6 +443,8 @@ def run(*, search="", assignments="", per_page=100, max_pages=None,
         print("[dica] chaves da API ainda não mapeadas (top 10):")
         for k, c in desconhecidas.most_common(10):
             print(f"       {k} ({c}x)")
+    if chaves_que_sumiram():
+        print(f"[aviso] chaves conhecidas que não vieram em nenhum registro: {', '.join(chaves_que_sumiram())}")
     print("Agora rode: python -m pipeline.build")
 
 

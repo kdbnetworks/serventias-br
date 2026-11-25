@@ -87,9 +87,19 @@ precisa acontecer em produção.
 | `tipo_registro` | `serventia · corregedoria · suspeito · sem_atribuicao · indefinido`. Veja [Ruído cadastral](#ruído-cadastral). |
 | `municipio`, `uf` | Localidade |
 | `atribuicoes` | Flags derivadas da natureza e da denominação: `registro_imoveis`, `notas`, `protesto`, `registro_civil_pn`, `registro_civil_pj`, `titulos_documentos`, `contratos_maritimos`, `distribuicao` (texto original em `atribuicoes_raw`) |
-| extras | `endereco, bairro, cep, telefone, email, website, responsavel, comarca, circunscricao, codigo_ibge, latitude, longitude, id_cnj`, quando a fonte fornece |
+| `tipo_cartorio` | Regime da serventia: `PRIVATIZADO · OFICIALIZADO · PUBLICO` (outro valor vira `OUTRO`). Desde 11/2026. |
+| `substitutos` | Nomes dos substitutos, sem repetição, na ordem da fonte. No CSV, separados por `\|`, como as atribuições. Desde 11/2026. |
+| `comarca`, `comarca_uf` | A cidade-sede da comarca e a UF dela (`cidade_comarca` e `cidade_comarca_uf` na API). Mapeados desde 11/2026, mas a API ainda os manda vazios em todos os registros. |
+| extras | `endereco, bairro, cep, telefone, email, website, responsavel, circunscricao, codigo_ibge, latitude, longitude, id_cnj`, quando a fonte fornece |
 
 O schema formal está em [`schema/serventia.schema.json`](schema/serventia.schema.json).
+
+**O que a fonte deixou de mandar.** Em 11/2026 o Justiça Aberta tirou `id`,
+`latitude` e `longitude` da resposta. O build herda esses três da coleta
+anterior, pelo CNS, quando a coleta nova os traz vazios; valor novo da fonte
+sempre vence. O `meta.json` conta quantos campos foram herdados
+(`herdados_da_coleta_anterior`), e a coleta avisa, no fim, toda chave
+conhecida que não veio em nenhum registro.
 
 Uma coisa que confunde no começo: `status` e `situacao_juridica` são campos
 diferentes e respondem a perguntas diferentes. Uma serventia pode estar

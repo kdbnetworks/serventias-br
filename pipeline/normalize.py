@@ -19,6 +19,12 @@ Campos canônicos:
     search_text      str  texto sem acentos/minúsculo p/ busca e autofill
     fonte            str  origem do registro
     coletado_em      str  ISO-8601
+
+Opcionais, quando a fonte informa (ver `build_record(extras=...)`):
+    tipo_cartorio    str  PRIVATIZADO | OFICIALIZADO | PUBLICO (regime da serventia)
+    substitutos      list nomes dos substitutos, sem repetição, na ordem da fonte
+    comarca          str  cidade-sede da comarca
+    comarca_uf       str  UF da comarca
 """
 from __future__ import annotations
 
@@ -146,6 +152,37 @@ RE_CORREGEDORIA = re.compile(
     r"\bcorregedoria\b|\btribunal de justica\b|\bdiretoria do foro\b")
 RE_SUSPEITO = re.compile(
     r"\bteste\b|^sej\d{3,}|\bhomologacao\b|\bxxx+\b|^sem denominacao$")
+
+
+# --------------------------------------------------------------------------- #
+# Regime da serventia e substitutos (campos que a API passou a mandar, 11/2026)
+# --------------------------------------------------------------------------- #
+# `tipo_cartorio` vem em caixa alta e só com três valores em 8.302 registros
+# conferidos (SC, MG, SP, BA, RS, PR): PRIVATIZADO, OFICIALIZADO, PUBLICO. Fica
+# como veio, só aparado; valor fora dos três vira OUTRO, sem perder o original.
+TIPOS_CARTORIO = {"PRIVATIZADO", "OFICIALIZADO", "PUBLICO"}
+
+
+def normalize_tipo_cartorio(raw) -> str | None:
+    t = strip_accents(norm_text(raw)).upper()
+    if not t:
+        return None
+    return t if t in TIPOS_CARTORIO else "OUTRO"
+
+
+def parse_substitutos(raw) -> list[str]:
+    """'A | B | A' -> ['A', 'B']. A API manda os nomes num texto só, separados
+    por « | », e às vezes repete o mesmo nome. Aceita lista também."""
+    if raw is None:
+        return []
+    partes = raw if isinstance(raw, (list, tuple)) else str(raw).split("|")
+    out, vistos = [], set()
+    for p in partes:
+        nome = norm_text(p)
+        if nome and fold(nome) not in vistos:
+            vistos.add(fold(nome))
+            out.append(nome)
+    return out
 
 
 def classificar_registro(denominacao, atribuicoes=None) -> str:
@@ -279,6 +316,15 @@ def build_record(
         if sj:
             rec["situacao_juridica"] = sj
             rec["situacao_juridica_raw"] = sj_raw
+        tc = normalize_tipo_cartorio(extras.get("tipo_cartorio"))
+        if tc:
+            rec["tipo_cartorio"] = tc
+        cuf = normalize_uf(extras.get("comarca_uf"))
+        if cuf:
+            rec["comarca_uf"] = cuf
+        subs = parse_substitutos(extras.get("substitutos"))
+        if subs:
+            rec["substitutos"] = subs
     return rec
 
 
@@ -291,6 +337,8 @@ def merge_records(a: dict, b: dict) -> dict:
             out[k] = v
         elif k == "atribuicoes":
             out[k] = sorted(set(cur or []) | set(v or []))
+        elif k == "substitutos":
+            out[k] = parse_substitutos(list(cur or []) + list(v or []))
     srcs = {s for s in re.split(r"\s*\+\s*", str(a.get("fonte", ""))) if s}
     srcs |= {s for s in re.split(r"\s*\+\s*", str(b.get("fonte", ""))) if s}
     out["fonte"] = " + ".join(sorted(srcs))

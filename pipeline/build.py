@@ -38,12 +38,21 @@ DIST = ROOT / "data" / "dist"
 
 # O CSV carrega TUDO que o registro canônico tem, para que `--de-csv` seja
 # sem perdas. Quem lê por cabeçalho ignora o que não conhece.
+# As listas (`atribuicoes`, `substitutos`) viajam como texto separado por «|».
 CSV_FIELDS = ["cns", "cns_digits", "denominacao", "status", "status_raw",
-              "situacao_juridica", "situacao_juridica_raw", "tipo_registro",
+              "situacao_juridica", "situacao_juridica_raw", "tipo_cartorio", "tipo_registro",
               "municipio", "uf", "atribuicoes", "atribuicoes_raw",
               "endereco", "bairro", "cep", "telefone", "email", "website",
-              "responsavel", "comarca", "circunscricao", "codigo_ibge",
+              "responsavel", "substitutos", "comarca", "comarca_uf", "circunscricao", "codigo_ibge",
               "latitude", "longitude", "id_cnj", "fonte", "coletado_em"]
+LISTAS = ("atribuicoes", "substitutos")
+
+# O que a fonte DEIXOU de mandar e o build herda da coleta anterior, pelo CNS.
+# Em 11/2026 o Justiça Aberta tirou `id`, `latitude` e `longitude` da resposta;
+# sem herança, a coleta seguinte apagaria o id_cnj e as coordenadas de todas as
+# serventias (o importador do serventias-laravel grava null por cima). Só entra
+# o que veio vazio na coleta nova: valor novo da fonte sempre vence.
+HERDADOS = ("id_cnj", "latitude", "longitude")
 
 CSV_GZ = DIST / "serventias.csv.gz"
 MANIFESTO = DIST / "manifest.json"
@@ -77,7 +86,8 @@ def _iter_csv_gz(caminho: Path):
     with gzip.open(caminho, "rt", encoding="utf-8", newline="") as fh:
         for row in csv.DictReader(fh, delimiter=";"):
             rec = {k: (v if v not in ("", None) else None) for k, v in row.items()}
-            rec["atribuicoes"] = [a for a in (row.get("atribuicoes") or "").split("|") if a]
+            for lista in LISTAS:
+                rec[lista] = [a for a in (row.get(lista) or "").split("|") if a]
             rec["search_text"] = make_search_text(
                 rec["cns_digits"], rec["cns"], rec.get("denominacao"),
                 rec.get("municipio"), rec.get("uf"), rec.get("atribuicoes_raw"))
@@ -88,7 +98,8 @@ def _escrever_csv(recs: list[dict], regravar_gz: bool = True) -> None:
     linhas = []
     for r in recs:
         row = {k: r.get(k) for k in CSV_FIELDS}
-        row["atribuicoes"] = "|".join(r.get("atribuicoes") or [])
+        for lista in LISTAS:
+            row[lista] = "|".join(r.get(lista) or [])
         linhas.append(row)
 
     with (DIST / "serventias.csv").open("w", newline="", encoding="utf-8") as fh:
@@ -110,6 +121,22 @@ def _escrever_csv(recs: list[dict], regravar_gz: bool = True) -> None:
         destino.write(origem.read())
 
 
+def herdar_da_coleta_anterior(registros: dict[str, dict], caminho: Path) -> int:
+    """Completa os HERDADOS vazios com o valor da release anterior. Devolve quantos campos herdou."""
+    if not caminho.exists():
+        return 0
+    herdados = 0
+    for antigo in _iter_csv_gz(caminho):
+        novo = registros.get(antigo["cns_digits"])
+        if novo is None:
+            continue
+        for campo in HERDADOS:
+            if novo.get(campo) in (None, "") and antigo.get(campo) not in (None, ""):
+                novo[campo] = antigo[campo]
+                herdados += 1
+    return herdados
+
+
 def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) -> None:
     registros: dict[str, dict] = {}
     lidos = 0
@@ -118,6 +145,10 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
         lidos += 1
         key = rec["cns_digits"]
         registros[key] = merge_records(registros[key], rec) if key in registros else rec
+
+    herdados = 0 if de_csv else herdar_da_coleta_anterior(registros, CSV_GZ)
+    if herdados:
+        print(f"[info] {herdados} campos herdados da coleta anterior ({', '.join(HERDADOS)}): a fonte deixou de mandá-los")
 
     recs = sorted(registros.values(), key=lambda r: (r.get("uf") or "ZZ", r.get("municipio") or "", r["cns_digits"]))
     DIST.mkdir(parents=True, exist_ok=True)
@@ -160,6 +191,7 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
             status_raw TEXT,
             situacao_juridica TEXT,
             situacao_juridica_raw TEXT,
+            tipo_cartorio TEXT,
             tipo_registro TEXT,
             municipio TEXT,
             uf TEXT,
@@ -167,21 +199,22 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
             atribuicoes_raw TEXT,
             endereco TEXT, bairro TEXT, cep TEXT,
             telefone TEXT, email TEXT, website TEXT, responsavel TEXT,
-            comarca TEXT, codigo_ibge TEXT,
+            substitutos TEXT,          -- nomes separados por |
+            comarca TEXT, comarca_uf TEXT, codigo_ibge TEXT,
             circunscricao TEXT, latitude TEXT, longitude TEXT, id_cnj TEXT,
             search_text TEXT,
             fonte TEXT, coletado_em TEXT
         )""")
     con.executemany(
         """INSERT INTO serventias VALUES (:cns_digits,:cns,:denominacao,:status,:status_raw,
-           :situacao_juridica,:situacao_juridica_raw,:tipo_registro,
+           :situacao_juridica,:situacao_juridica_raw,:tipo_cartorio,:tipo_registro,
            :municipio,:uf,:atribuicoes,:atribuicoes_raw,:endereco,:bairro,:cep,:telefone,
-           :email,:website,:responsavel,:comarca,:codigo_ibge,
+           :email,:website,:responsavel,:substitutos,:comarca,:comarca_uf,:codigo_ibge,
            :circunscricao,:latitude,:longitude,:id_cnj,:search_text,:fonte,:coletado_em)""",
         [{**{k: None for k in CSV_FIELDS + ["search_text"]},
           **{k: (None if v is None else v if isinstance(v, (str, int, float)) else str(v))
              for k, v in r.items()},
-          "atribuicoes": "|".join(r.get("atribuicoes") or [])} for r in recs])
+          **{lista: "|".join(r.get(lista) or []) for lista in LISTAS}} for r in recs])
     con.execute("CREATE INDEX ix_uf_mun ON serventias(uf, municipio)")
     con.execute("CREATE INDEX ix_status ON serventias(status)")
     con.execute("CREATE INDEX ix_tipo ON serventias(tipo_registro)")
@@ -208,7 +241,10 @@ def build(com_amostra: bool = False, de_csv: bool = False, force: bool = False) 
         "por_tipo_registro": dict(Counter(r.get("tipo_registro") or "indefinido"
                                           for r in recs).most_common()),
         "por_atribuicao": dict(Counter(a for r in recs for a in r.get("atribuicoes") or []).most_common()),
+        "por_tipo_cartorio": dict(Counter(r.get("tipo_cartorio") or "NAO_INFORMADO"
+                                          for r in recs).most_common()),
         "fontes": dict(Counter(r.get("fonte") for r in recs).most_common()),
+        "herdados_da_coleta_anterior": herdados,
     }
     # O meta.json versionado viaja como o .csv.gz: a release não o reescreve.
     # Os JSON saem com LF em qualquer máquina — o git guarda LF, e um sha
