@@ -1,24 +1,24 @@
 {
-  "gerado_em": "2026-09-15T04:09:19+00:00",
-  "linhas_lidas": 16269,
-  "serventias_unicas": 16269,
+  "gerado_em": "2026-11-25T21:22:14+00:00",
+  "linhas_lidas": 16272,
+  "serventias_unicas": 16272,
   "por_uf": {
-    "AC": 138,
+    "AC": 137,
     "AL": 278,
     "AM": 125,
     "AP": 24,
     "BA": 1806,
-    "CE": 726,
-    "DF": 41,
+    "CE": 724,
+    "DF": 42,
     "ES": 410,
-    "GO": 755,
+    "GO": 757,
     "MA": 333,
     "MG": 3213,
     "MS": 202,
     "MT": 316,
     "PA": 388,
     "PB": 534,
-    "PE": 623,
+    "PE": 626,
     "PI": 403,
     "PR": 1297,
     "RJ": 620,
@@ -32,36 +32,42 @@
     "TO": 338
   },
   "por_status": {
-    "ATIVADA": 12177,
-    "DESATIVADA": 3875,
-    "EXTINTA": 217
+    "ATIVADA": 12108,
+    "DESATIVADA": 3826,
+    "EXTINTA": 338
   },
   "por_situacao_juridica": {
-    "PROVIDA": 8595,
-    "VAGA": 5103,
-    "NAO_INFORMADA": 2006,
-    "CONVERSAO_EM_DILIGENCIA": 483,
-    "SOB_INTERVENCAO": 79,
-    "VAGA_SUB_JUDICE": 3
+    "PROVIDA": 8743,
+    "VAGA": 5094,
+    "NAO_INFORMADA": 2002,
+    "CONVERSAO_EM_DILIGENCIA": 349,
+    "SOB_INTERVENCAO": 77,
+    "VAGA_SUB_JUDICE": 7
   },
   "por_tipo_registro": {
-    "serventia": 15849,
-    "sem_atribuicao": 385,
+    "serventia": 15853,
+    "sem_atribuicao": 384,
     "corregedoria": 30,
     "suspeito": 4,
     "indefinido": 1
   },
   "por_atribuicao": {
-    "registro_civil_pn": 11368,
-    "notas": 10186,
-    "protesto": 4644,
-    "titulos_documentos": 4537,
-    "registro_civil_pj": 4492,
-    "registro_imoveis": 4263,
-    "contratos_maritimos": 827,
-    "distribuicao": 473
+    "registro_civil_pn": 11379,
+    "notas": 10410,
+    "protesto": 4652,
+    "titulos_documentos": 4549,
+    "registro_civil_pj": 4498,
+    "registro_imoveis": 4272,
+    "contratos_maritimos": 825,
+    "distribuicao": 463
+  },
+  "por_tipo_cartorio": {
+    "PRIVATIZADO": 12924,
+    "OFICIALIZADO": 3280,
+    "PUBLICO": 68
   },
   "fontes": {
-    "justica_aberta_api": 16269
-  }
+    "justica_aberta_api": 16272
+  },
+  "herdados_da_coleta_anterior": 0
 }
